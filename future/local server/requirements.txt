@@ -7,7 +7,7 @@ optimum==1.15.0
 auto-gptq==0.5.1
 
 # For the Server
-fastapi==0.105.0
+fastapi==0.109.1
 uvicorn==0.24.0.post1
 
 # For the Client
