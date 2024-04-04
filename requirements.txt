@@ -1,0 +1,7 @@
+# -e .[all]
+# -r requirements-test.txt
+
+# pydantic>=2.3.0,<3.0.0
+# astor>=0.8
+streamlit==1.32.2
+pydantic==2.6.4

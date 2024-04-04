@@ -1,0 +1,17 @@
+# For the model
+torch==2.1.1
+torchvision==0.16.1
+torchaudio==2.1.1
+transformers==4.36.0
+optimum==1.15.0
+auto-gptq==0.5.1
+
+# For the Server
+fastapi==0.105.0
+uvicorn==0.24.0.post1
+
+# For the Client
+httpx==0.25.2
+pytest==7.4.3
+pytest-asyncio==0.23.2
+watchfiles==0.21.0
