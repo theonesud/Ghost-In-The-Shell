@@ -1,0 +1,29 @@
+metadata:
+  language: python
+  libraries: # it will get the documentation of these libraries
+    - sqlalchemy=1.2.3
+    - fastapi=1.0.0
+    - pytest=4.2.3
+  lib_doc_loc: ~/.frank/python # it will save the library doc scrapes and indexes here
+  type: api # can be script
+  repo_path: /src/coding_project # will cd into this folder before run/test
+  run: "uvicorn run:app.app"
+  test: "pytest -s tests"
+  docs_folder: /src/coding_project/docs
+  src_folder: /src/coding_project/app # will index this folder
+  index_folder: /src/coding_project/index # every branch will have a different folder inside
+  test_folder: /src/coding_project/tests # will write tests in this folder
+  task_list_loc: /src/coding_project/tasks.txt # can be connected to github projects, jira, trello, asana, etc
+  dev_branch: dev
+init:
+  - index the entire src_folder in dev branch # create documentation for each file, function, class in docs_folder, create an index (using treesitter/embeddings) for the repo in index_folder
+steps:
+  - git checkout to dev branch, create a task branch from it
+  - read a task # pick the first task from the list / create a custom ordering using topological sort and then take the first task / score the task on fib scale + using priority, create the order
+  - (PLAN) create a plan on how to achieve the task, which files to edit (or new ones to create)
+  - (DO) edit (or create) those files (also update the index and the documentation and git commit)
+  - (OBSERVE) run tests (or create new tests and then run them all/selective)
+  - (PLAN) if tests fail, debug the error, go back two steps
+  - verify if the task was done as expected (not by using some workaround to just pass test cases)
+  - run all the tests once more
+  - git commit to a separate branch, push and send a PR to the dev branch
