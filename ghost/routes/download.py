@@ -1,10 +1,17 @@
+import asyncio
 import os
 import urllib.parse
+from typing import List
+
+import streamlit as st
+from ghost.utils.openai import OpenAIChatLLM
+from pydantic import BaseModel
 from selenium import webdriver
 from selenium.webdriver.firefox.options import Options
-# options = Options()
-# options.add_argument("--headless")
-driver = webdriver.Firefox()
+
+# Set up Firefox options for headless mode
+options = Options()
+options.headless = True
 
 url_list = [
     "https://fastapi.tiangolo.com/",
@@ -113,13 +120,33 @@ url_list = [
     "https://fastapi.tiangolo.com/tutorial/testing/",
 ]
 
-for url in url_list:
-    driver.get(url)
-    path = urllib.parse.urlparse(url).path.rstrip('/')
-    path = path[1:]
-    if not path:
-        path = 'index'
-    filename = path.replace("/", "-") + ".html"
-    print(filename)
-    with open('fastapi/' + filename, 'w', encoding="utf-8") as f:
-        f.write(driver.page_source)
+
+class URLList(BaseModel):
+    urls: List[str] = []
+
+
+def reply_to_intent_8(prompt, messages):
+    if st.session_state.pair_index == 0:
+        st.session_state.pair_index = 1
+        return "Which urls would you like to download?"
+    elif st.session_state.pair_index == 1:
+        translator = OpenAIChatLLM()
+        asyncio.run(
+            translator.set_system_prompt(
+                "Create valid urls from the users query Eg: https://www.google.com, https://www.facebook.com"
+            )
+        )
+        urls = asyncio.run(translator(prompt, URLList))
+        driver = webdriver.Firefox(options=options)
+        for url in urls.urls:
+            driver.get(url)
+            path = urllib.parse.urlparse(url).path.rstrip("/")
+            path = path[1:]
+            if not path:
+                path = "index"
+            filename = path.replace("/", "-") + ".html"
+            print(filename)
+            os.makedirs("output/downloads", exist_ok=True)
+            with open("output/downloads/" + filename, "w", encoding="utf-8") as f:
+                f.write(driver.page_source)
+        return urls

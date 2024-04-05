@@ -63,7 +63,7 @@ class ChatLLM(ABC):
             total_tokens += len(await self.tokenizer(message.content))
         return total_tokens
 
-    async def _call_chatllm(self, message: Message) -> Message:
+    async def _call_chatllm(self, message: Message, resp_model=None) -> Message:
         if self.tokenizer:
             total_tokens = await self._calculate_chat_history_tokens()
             if self.max_input_tokens:
@@ -84,10 +84,10 @@ class ChatLLM(ABC):
         if not get_num_params(self._reply):
             reply = await self._reply()
         else:
-            reply = await self._reply(message.content)
-        reply = Message(role=MessageRole.assistant, content=reply)
+            reply = await self._reply(message.content, resp_model)
+        reply_str = Message(role=MessageRole.assistant, content=f"{reply}")
         if self.tokenizer:
-            reply_tokens = len(await self.tokenizer(reply.content))
+            reply_tokens = len(await self.tokenizer(reply_str.content))
         else:
             reply_tokens = None
         publish_event(
@@ -97,14 +97,17 @@ class ChatLLM(ABC):
                 "msg_role": message.role,
                 "msg_content": message.content,
                 "msg_tokens": msg_tokens,
-                "reply_role": reply.role,
-                "reply_content": reply.content,
+                "reply_role": reply_str.role,
+                "reply_content": reply_str.content,
                 "reply_tokens": reply_tokens,
             },
         )
-        return reply
+        if resp_model:
+            return reply
+        else:
+            return reply_str
 
-    async def _reply(self, prompt: Optional[str] = None) -> str:
+    async def _reply(self, prompt: Optional[str] = None, resp_model=None) -> str:
         """Generate the reply given a prompt.
         Do not use this method directly. Use `__call__` instead.
 
@@ -118,7 +121,7 @@ class ChatLLM(ABC):
         """
         raise NotImplementedError
 
-    async def __call__(self, prompt: str) -> str:
+    async def __call__(self, prompt: str, resp_model=None) -> str:
         """Generate the reply given a prompt.
 
         Parameters
@@ -144,9 +147,12 @@ class ChatLLM(ABC):
         if self.llm:
             reply = await self._call_llm(message)
         else:
-            reply = await self._call_chatllm(message)
+            reply = await self._call_chatllm(message, resp_model)
         self.chat_history.append(reply)
-        return reply.content
+        if resp_model:
+            return reply
+        else:
+            return reply.content
 
     @classmethod
     def from_llm(cls, llm: LLM) -> "ChatLLM":

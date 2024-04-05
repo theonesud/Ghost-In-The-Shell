@@ -10,10 +10,10 @@ home = os.path.expanduser("~")
 os.makedirs(f"{home}/.ghost", exist_ok=True)
 conn = sqlite3.connect(f"{home}/.ghost/backup.db")
 cur = conn.cursor()
-cur.execute(
-    """CREATE TABLE IF NOT EXISTS backup (
-            TIMESTAMP TEXT, EVENT TEXT, ID INT, DATA TEXT)"""
-)
+# cur.execute(
+#     """CREATE TABLE IF NOT EXISTS backup (
+#             TIMESTAMP TEXT, EVENT TEXT, ID INT, DATA TEXT)"""
+# )
 
 
 def file_callback(
@@ -29,6 +29,7 @@ def file_callback(
 
 
 def setup_file_callback():
+    return
     subscribe_event(Event.LLMEnd, file_callback)
     subscribe_event(Event.ChatLLMInit, file_callback)
     subscribe_event(Event.ChatLLMEnd, file_callback)

@@ -1,21 +1,19 @@
 import ast
 import asyncio
-import hmac
 import multiprocessing as mp
+import re
 from contextlib import redirect_stdout
 from io import StringIO
+from typing import List
 
 import astor
 import pandas as pd
 import streamlit as st
 from dotenv import load_dotenv
-from openai import OpenAI
+from ghost.utils.openai import OpenAIChatLLM
+from pydantic import BaseModel, Field
 
 load_dotenv()
-
-
-def reply_to_intent_1():
-    pass
 
 
 def create_dummy_catalog():
@@ -712,33 +710,79 @@ def create_dummy_sales():
     return pd.DataFrame(rows)
 
 
-def generate_search_tags(query, catalog_data):
-    """
-    Use OpenAI's GPT-3.5 API to convert a natural language query into searchable tags.
-    """
-    # take from data[tags] column
-    # print(catalog_data)
-    unique_tags = catalog_data["Tags"]
-    try:
-        client = OpenAI()
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo-1106",
-            response_format={"type": "json_object"},
-            messages=[
-                {
-                    "role": "system",
-                    "content": "You are a helpful assistant designed to output JSON.",
-                },
-                {
-                    "role": "user",
-                    "content": f"Create the ecommerce website search tags for this query: {query}. You can choose from the tags mentioned in this db column {unique_tags} Output in this format: key:'response' -> val:['tag1', 'tag2', 'tag3']",
-                },
-            ],
+catalog_data = create_dummy_catalog()
+sales_data = create_dummy_sales()
+ai = OpenAIChatLLM()
+
+
+class TagResp(BaseModel):
+    tags: List[str]
+
+
+def reply_to_intent_1(prompt, messages):
+    st.write("Catalog:")
+    st.dataframe(catalog_data)
+    if st.session_state.pair_index == 0:
+        # st.write("Sales:")
+        # st.dataframe(sales_data)
+        st.session_state.pair_index = 1
+        return "Search by Vibe: Eg: Show me a beautiful dress to wear at a party"
+    elif st.session_state.pair_index == 1:
+        ecom_tagger = OpenAIChatLLM()
+        asyncio.run(
+            ecom_tagger.set_system_prompt(
+                f"Create the ecommerce website search tags for the user query. You can choose from the tags mentioned in this db column {catalog_data["Tags"]}"
+            )
         )
-        return response.choices[0].message.content
-    except Exception as e:
-        st.error(f"Error in generating search tags: {str(e)}")
-        return []
+
+        tags = asyncio.run(ecom_tagger(prompt, TagResp))
+        return search_catalog(tags.tags, catalog_data)
+
+
+class PythonCode(BaseModel):
+    code: str = Field(description="Python code in the format ````python\ncode\n```")
+
+
+def reply_to_intent_2(prompt, messages):
+    st.write("Sales:")
+    st.dataframe(sales_data)
+    if st.session_state.pair_index == 0:
+        # st.write("Catalog:")
+        # st.dataframe(catalog_data)
+        st.session_state.pair_index = 1
+        return "Ask a business question: Eg: What was my sales compared to returns last month?"
+    elif st.session_state.pair_index == 1:
+        query_writer = OpenAIChatLLM()
+        asyncio.run(
+            query_writer.set_system_prompt(
+                f"You are an expert in writing Python code using Pandas to solve the user's needs. Reply only with the code, do not explain or add comments. Here's the df.head() \n {sales_data.head()}. Write a complete python script using pandas in a code block ```python\n#code\n``` to help the user with the following query. You can write the code assuming df is present. If you want to import some library, you can."
+            )
+        )
+        resp = asyncio.run(
+            query_writer(
+                prompt,
+                PythonCode,
+            )
+        )
+        content = resp.code
+        python_code = re.findall(r"```python(.*?)```", content, re.DOTALL)
+        if not python_code:
+            python_code = content
+        # st.code(f"{python_code}")
+        run_results = asyncio.run(run_python_code(python_code, {"df": sales_data}))
+        explainer = OpenAIChatLLM()
+        asyncio.run(
+            explainer.set_system_prompt(
+                """You are an expert in explaining Python code using Pandas to solve the user's needs."""
+            )
+        )
+        explaination = asyncio.run(
+            explainer(
+                f"Here's the code: {python_code}. Here's the output: {run_results}. Explain the code in simple english in a line and communicate the output of the last line."
+            )
+        )
+        # st.write("", explaination)
+        return f"# Code:\n ```python{python_code}\n``` \n\n # Results: \n{run_results} \n # Explaination: \n{explaination}"
 
 
 def search_catalog(tags, catalog):
@@ -749,43 +793,8 @@ def search_catalog(tags, catalog):
     for tag in tags:
         matched_items = catalog[catalog["Tags"].str.contains(tag, case=False)]
         results = pd.concat([results, matched_items]).drop_duplicates()
+    st.dataframe(results)
     return results
-
-
-def generate_python_query(description, df, history):
-    """
-    Use OpenAI's LLM to generate a Python query based on the user's description.
-    """
-    try:
-        client = OpenAI()
-        messages = []
-        messages += history
-        messages += [
-            {
-                "role": "system",
-                "content": "You are an expert in writing Python code using Pandas to solve the user's needs. Reply only with the code, do not explain or add comments",
-            },
-            {
-                "role": "user",
-                "content": f"Here's the df.head() \n {df.head()}. Write a python script to help the user with the following query: {description}",
-            },
-        ]
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo-1106",
-            # model="gpt-4-1106-preview",
-            temperature=0.1,
-            # response_format={"type": "json_object"},
-            messages=messages,
-        )
-
-        return (
-            response.choices[0]
-            .message.content.replace("```python ", "")
-            .replace("```", "")
-            .replace("python", "")
-        )
-    except Exception as e:
-        return f"Error in generating query: {str(e)}"
 
 
 def _target_func(queue, code: str, vars: dict) -> None:
@@ -852,102 +861,3 @@ async def run_python_code(code: str, vars: dict = None, timeout=60):
         raise asyncio.TimeoutError
     result = await loop.run_in_executor(None, queue.get)
     return result[0]
-
-
-def check_password():
-    def password_entered():
-        if hmac.compare_digest(st.session_state["password"], st.secrets["password"]):
-            st.session_state["password_correct"] = True
-            del st.session_state["password"]
-        else:
-            st.session_state["password_correct"] = False
-
-    if st.session_state.get("password_correct", False):
-        return True
-
-    st.text_input(
-        "Password", type="password", on_change=password_entered, key="password"
-    )
-    if "password_correct" in st.session_state:
-        st.error("😕 Password incorrect")
-    return False
-
-
-def explain(code, result):
-    try:
-        client = OpenAI()
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo-1106",
-            # model="gpt-4-1106-preview",
-            # temperature=0.5,
-            # response_format={"type": "json_object"},
-            messages=[
-                {
-                    "role": "system",
-                    "content": "You are an expert in explaining Python code using Pandas to solve the user's needs",
-                },
-                {
-                    "role": "user",
-                    "content": f"Here's the code: {code}. Here's the output: {result}. Explain the code in simple english in a line and communicate the output of the last line.",
-                },
-            ],
-        )
-
-        return (
-            response.choices[0]
-            .message.content.replace("```python ", "")
-            .replace("```", "")
-            .replace("python", "")
-        )
-        # return response.choices[0].text
-    except Exception as e:
-        return f"Error in generating explaination: {str(e)}"
-
-
-def main():
-    st.title("AI Search")
-
-    # Create and display dummy catalog data
-    catalog_data = create_dummy_catalog()
-    st.write("Catalog:")
-    st.dataframe(catalog_data)
-
-    sales_data = create_dummy_sales()
-    st.write("Sales:")
-    st.dataframe(sales_data)
-
-    query = st.text_input(
-        "Search by Vibe", "Show me something fancy to wear at a party"
-    )
-
-    if st.button("Search"):
-        with st.spinner("Processing your query..."):
-            # Generate search tags from the query
-            search_tags = generate_search_tags(query, catalog_data)
-            st.write(f"Search Tags: {eval(search_tags)['response']}")
-
-            search_results = search_catalog(
-                (eval(search_tags)["response"]), catalog_data
-            )
-            st.write("", search_results)
-
-    query = st.text_input(
-        "Ask a business question", "What was my sales compared to returns last month?"
-    )
-
-    if st.button("Analyse"):
-        with st.spinner("Writing Code..."):
-            # Generate search tags from the query
-            python_code = generate_python_query(query, sales_data, [])
-            st.code(f"{python_code}")
-
-            run_results = asyncio.run(run_python_code(python_code, {"df": sales_data}))
-            explaination = explain(python_code, run_results)
-
-            st.write("", explaination)
-
-
-if __name__ == "__main__":
-    # if not check_password():
-    #     st.stop()
-    main()
