@@ -11,7 +11,7 @@ def main():
     if "intent" not in st.session_state:
         st.session_state.intent = ""
         st.session_state.pair_index = None
-        usage = f"""### Choose your intent:
+        usage = f"""### What do you want to do?
 {intents}
         """
         st.markdown(usage)

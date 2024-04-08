@@ -20,12 +20,6 @@ asyncio.run(
         "Create a personalized email for the user mentioned customer segment"
     )
 )
-tweeter = OpenAIChatLLM()
-asyncio.run(
-    tweeter.set_system_prompt(
-        "Generate an engaging twitter post based on the user's usecase. Do not use hashtags. The post should be relavent to the user's query and provide great value"
-    )
-)
 
 
 def reply_to_intent_5(prompt, messages):
@@ -50,6 +44,14 @@ def reply_to_intent_6(prompt, messages):
     elif st.session_state.pair_index == 1:
         translation = asyncio.run(emailer(prompt))
         return translation
+
+
+tweeter = OpenAIChatLLM()
+asyncio.run(
+    tweeter.set_system_prompt(
+        "Generate an engaging twitter post based on the user's usecase. Do not use hashtags. The post should be relavent to the user's query and provide great value"
+    )
+)
 
 
 def reply_to_intent_7(prompt, messages):

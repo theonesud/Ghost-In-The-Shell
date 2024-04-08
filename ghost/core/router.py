@@ -10,10 +10,10 @@ from ghost.routes.customer_support import (
     reply_to_intent_7,
 )
 from ghost.routes.download import reply_to_intent_8
+from ghost.routes.personas import reply_to_intent_10
 from ghost.utils.openai import OpenAIChatLLM
 
 intents = """
-with the intent and nothing else.
 1. The user wants to Search by Vibe from a ecom catalog
 2. The user wants to Ask a business question to a sales database
 3. The user wants to use the python template to create a new fastapi server
@@ -23,6 +23,7 @@ with the intent and nothing else.
 7. The user wants to create a twitter post for a topic
 8. The user wants to download some urls
 9. The user wants to talk to the automaton
+10. The user wants to talk to a specific persona
 """
 intent_recognizer = OpenAIChatLLM()
 asyncio.run(
@@ -51,23 +52,13 @@ def route(prompt, messages):
         intent_no = int(asyncio.run(intent_recognizer(prompt)))
         st.session_state.intent = intent_no
         st.session_state.pair_index = 0
-    if intent_no == 1:
-        return reply_to_intent_1(prompt, messages)
-    elif intent_no == 2:
-        return reply_to_intent_2(prompt, messages)
-    elif intent_no == 3:
-        return reply_to_intent_3(prompt, messages)
-    elif intent_no == 4:
-        return reply_to_intent_4(prompt, messages)
-    elif intent_no == 5:
-        return reply_to_intent_5(prompt, messages)
-    elif intent_no == 6:
-        return reply_to_intent_6(prompt, messages)
-    elif intent_no == 7:
-        return reply_to_intent_7(prompt, messages)
-    elif intent_no == 8:
-        return reply_to_intent_8(prompt, messages)
-    elif intent_no == 9:
-        return reply_to_intent_9(prompt, messages)
-    else:
-        return "Invalid Intent"
+    # print(f"?????????????????????????Intent: {intent_no}, {type(intent_no)}")
+    return globals()[f"reply_to_intent_{intent_no}"](prompt, messages)
+    # try:
+    #     reply_function = globals().get(f"reply_to_intent_{intent_no}")
+    #     if reply_function:
+    #         return reply_function(prompt, messages)
+    #     else:
+    #         raise ValueError(f"No function found for intent number: {intent_no}")
+    # except Exception as e:
+    #     return str(e)

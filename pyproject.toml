@@ -91,6 +91,7 @@ ignore = [
     "E501", # line too long, handled by black
     "B027", # empty method in an abstract base class, but has no abstract decorator
     "C901", # function is too complex
+    "F401" # imported but unused
 ]
 
 
