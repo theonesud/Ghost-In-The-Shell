@@ -12,3 +12,5 @@ env/
 dist/
 output/
 .streamlit
+ghost.pkl
+.fuse_hidden*

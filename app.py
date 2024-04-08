@@ -1,3 +1,6 @@
+import os
+import pickle
+
 import streamlit as st
 from ghost.core.router import intents, route
 
@@ -5,8 +8,18 @@ from ghost.core.router import intents, route
 def main():
     st.title("Ghost in the Shell")
 
+    # file_path = os.path.join(os.getcwd(), "ghost.pkl")
     if "messages" not in st.session_state:
         st.session_state.messages = []
+    # if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
+    #     with open(file_path, "rb") as f:
+    #         st.session_state.messages = pickle.load(f)
+    # else:
+    #     with open(file_path, "wb") as f:
+    #         pickle.dump(st.session_state.messages, f)
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
 
     if "intent" not in st.session_state:
         st.session_state.intent = ""
@@ -27,6 +40,8 @@ def main():
             response = route(prompt, st.session_state.messages)
             st.markdown(response)
         st.session_state.messages.append({"role": "assistant", "content": response})
+    # with open(os.path.join(os.getcwd(), "ghost.pkl"), "wb") as f:
+    #     pickle.dump(st.session_state.messages, f)
 
 
 def check_password():
@@ -46,20 +61,6 @@ def check_password():
     if "password_correct" in st.session_state:
         st.error("😕 Password incorrect")
     return False
-
-
-# import os
-# import time
-
-# from lib.pragma import reply
-
-# os.makedirs("scrapes", exist_ok=True)
-
-
-# if __name__ == "__main__":
-#     start_time = time.time()
-#     reply("https://inbox.logisy.tech/inbox/tickets/6766326")
-#     print(f"Total time taken: {time.time() - start_time :.2f} seconds")
 
 
 if __name__ == "__main__":

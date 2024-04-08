@@ -1,16 +1,18 @@
 import asyncio
 
 import streamlit as st
-from ghost.routes.ai_search import reply_to_intent_1, reply_to_intent_2
-from ghost.routes.assistant import reply_to_intent_3, reply_to_intent_4
-from ghost.routes.automaton import reply_to_intent_9
-from ghost.routes.customer_support import (
+from ghost.routes.intents import (
+    reply_to_intent_1,
+    reply_to_intent_2,
+    reply_to_intent_3,
+    reply_to_intent_4,
     reply_to_intent_5,
     reply_to_intent_6,
     reply_to_intent_7,
+    reply_to_intent_8,
+    reply_to_intent_9,
+    reply_to_intent_10,
 )
-from ghost.routes.download import reply_to_intent_8
-from ghost.routes.personas import reply_to_intent_10
 from ghost.utils.openai import OpenAIChatLLM
 
 intents = """
@@ -35,30 +37,10 @@ with the intent
 
 
 def route(prompt, messages):
-    """
-    Determines the intent of the user's input and returns the appropriate response.
-
-    Args:
-        ai (object): The AI model to use for intent recognition.
-        prompt (str): The user's input prompt.
-        messages (list): A list of previous messages in the conversation.
-
-    Returns:
-        str: The appropriate response based on the recognized intent, or "Invalid Intent" if the intent is not recognized.
-    """
     if st.session_state.intent:
         intent_no = st.session_state.intent
     else:
         intent_no = int(asyncio.run(intent_recognizer(prompt)))
         st.session_state.intent = intent_no
         st.session_state.pair_index = 0
-    # print(f"?????????????????????????Intent: {intent_no}, {type(intent_no)}")
     return globals()[f"reply_to_intent_{intent_no}"](prompt, messages)
-    # try:
-    #     reply_function = globals().get(f"reply_to_intent_{intent_no}")
-    #     if reply_function:
-    #         return reply_function(prompt, messages)
-    #     else:
-    #         raise ValueError(f"No function found for intent number: {intent_no}")
-    # except Exception as e:
-    #     return str(e)
