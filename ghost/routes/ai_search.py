@@ -731,7 +731,7 @@ def reply_to_intent_1(prompt, messages):
         ecom_tagger = OpenAIChatLLM()
         asyncio.run(
             ecom_tagger.set_system_prompt(
-                f"Create the ecommerce website search tags for the user query. You can choose from the tags mentioned in this db column {catalog_data["Tags"]}"
+                f"Create the ecommerce website search tags for the user query. You can choose from the tags mentioned in this db column {catalog_data['Tags']}"
             )
         )
 

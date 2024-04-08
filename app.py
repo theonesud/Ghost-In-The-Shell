@@ -70,6 +70,6 @@ def check_password():
 
 
 if __name__ == "__main__":
-    if not check_password():
-        st.stop()
+    # if not check_password():
+    #     st.stop()
     main()
