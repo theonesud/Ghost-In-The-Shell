@@ -51,10 +51,3 @@ class OpenAIChatLLM(ChatLLM):
                 ],
             )
             return completion.choices[0].message.content
-
-
-# if __name__ == "__main__":
-#     tool_user_agent = ToolUserAgent(
-#         chatllm=OpenAIChatLLM(), tools=[TerminalTool(), PythonInterpreterTool()]
-#     )
-#     resp = asyncio.run(tool_user_agent("Count the number of lines in main.py"))

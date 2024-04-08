@@ -1,5 +1,5 @@
 import streamlit as st
-from ghost.core.router import route
+from ghost.core.router import intents, route
 
 
 def main():
@@ -11,15 +11,8 @@ def main():
     if "intent" not in st.session_state:
         st.session_state.intent = ""
         st.session_state.pair_index = None
-        usage = """### Choose your intent:
-1. Search by Vibe from a ecom catalog
-2. Ask a business question to a sales database
-3. use the python template to create a new fastapi server
-4. create a prd for backend team
-5. talk to a regional customer support representative
-6. create a personalized email for a customer segment
-7. create a twitter post for a topic
-8. download some urls
+        usage = f"""### Choose your intent:
+{intents}
         """
         st.markdown(usage)
 

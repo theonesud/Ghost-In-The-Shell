@@ -712,7 +712,24 @@ def create_dummy_sales():
 
 catalog_data = create_dummy_catalog()
 sales_data = create_dummy_sales()
-ai = OpenAIChatLLM()
+ecom_tagger = OpenAIChatLLM()
+asyncio.run(
+    ecom_tagger.set_system_prompt(
+        f"Create the ecommerce website search tags for the user query. You can choose from the tags mentioned in this db column {catalog_data['Tags']}"
+    )
+)
+query_writer = OpenAIChatLLM()
+asyncio.run(
+    query_writer.set_system_prompt(
+        f"You are an expert in writing Python code using Pandas to solve the user's needs. Reply only with the code, do not explain or add comments. Here's the df.head() \n {sales_data.head()}. Write a complete python script using pandas in a code block ```python\n#code\n``` to help the user with the following query. You can write the code assuming df is present. If you want to import some library, you can."
+    )
+)
+explainer = OpenAIChatLLM()
+asyncio.run(
+    explainer.set_system_prompt(
+        """You are an expert in explaining Python code using Pandas to solve the user's needs."""
+    )
+)
 
 
 class TagResp(BaseModel):
@@ -728,13 +745,6 @@ def reply_to_intent_1(prompt, messages):
         st.session_state.pair_index = 1
         return "Search by Vibe: Eg: Show me a beautiful dress to wear at a party"
     elif st.session_state.pair_index == 1:
-        ecom_tagger = OpenAIChatLLM()
-        asyncio.run(
-            ecom_tagger.set_system_prompt(
-                f"Create the ecommerce website search tags for the user query. You can choose from the tags mentioned in this db column {catalog_data['Tags']}"
-            )
-        )
-
         tags = asyncio.run(ecom_tagger(prompt, TagResp))
         return search_catalog(tags.tags, catalog_data)
 
@@ -752,12 +762,6 @@ def reply_to_intent_2(prompt, messages):
         st.session_state.pair_index = 1
         return "Ask a business question: Eg: What was my sales compared to returns last month?"
     elif st.session_state.pair_index == 1:
-        query_writer = OpenAIChatLLM()
-        asyncio.run(
-            query_writer.set_system_prompt(
-                f"You are an expert in writing Python code using Pandas to solve the user's needs. Reply only with the code, do not explain or add comments. Here's the df.head() \n {sales_data.head()}. Write a complete python script using pandas in a code block ```python\n#code\n``` to help the user with the following query. You can write the code assuming df is present. If you want to import some library, you can."
-            )
-        )
         resp = asyncio.run(
             query_writer(
                 prompt,
@@ -770,12 +774,7 @@ def reply_to_intent_2(prompt, messages):
             python_code = content
         # st.code(f"{python_code}")
         run_results = asyncio.run(run_python_code(python_code, {"df": sales_data}))
-        explainer = OpenAIChatLLM()
-        asyncio.run(
-            explainer.set_system_prompt(
-                """You are an expert in explaining Python code using Pandas to solve the user's needs."""
-            )
-        )
+
         explaination = asyncio.run(
             explainer(
                 f"Here's the code: {python_code}. Here's the output: {run_results}. Explain the code in simple english in a line and communicate the output of the last line."

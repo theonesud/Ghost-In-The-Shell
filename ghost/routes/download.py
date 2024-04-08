@@ -120,6 +120,13 @@ url_list = [
     "https://fastapi.tiangolo.com/tutorial/testing/",
 ]
 
+downloader = OpenAIChatLLM()
+asyncio.run(
+    downloader.set_system_prompt(
+        "Create valid urls from the users query Eg: https://www.google.com, https://www.facebook.com"
+    )
+)
+
 
 class URLList(BaseModel):
     urls: List[str] = []
@@ -130,13 +137,7 @@ def reply_to_intent_8(prompt, messages):
         st.session_state.pair_index = 1
         return "Which urls would you like to download?"
     elif st.session_state.pair_index == 1:
-        translator = OpenAIChatLLM()
-        asyncio.run(
-            translator.set_system_prompt(
-                "Create valid urls from the users query Eg: https://www.google.com, https://www.facebook.com"
-            )
-        )
-        urls = asyncio.run(translator(prompt, URLList))
+        urls = asyncio.run(downloader(prompt, URLList))
         driver = webdriver.Firefox(options=options)
         for url in urls.urls:
             driver.get(url)

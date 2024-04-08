@@ -236,9 +236,9 @@ class ToolUserAgent(Tool):
             tool_choice = await self._choose_tool(question)
             kwargs = await self._choose_args(question, tool_choice)
 
-            await self.human_confirmation(
-                {"tool": tool_choice.docs.name, "args": kwargs}
-            )
+            # await self.human_confirmation(
+            #     {"tool": tool_choice.docs.name, "args": kwargs}
+            # )
             result = await tool_choice(**kwargs)
 
             step = Step(
