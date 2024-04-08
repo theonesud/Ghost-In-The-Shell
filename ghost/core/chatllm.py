@@ -63,7 +63,9 @@ class ChatLLM(ABC):
             total_tokens += len(await self.tokenizer(message.content))
         return total_tokens
 
-    async def _call_chatllm(self, message: Message, resp_model=None) -> Message:
+    async def _call_chatllm(
+        self, message: Message, resp_model=None, history=None
+    ) -> Message:
         if self.tokenizer:
             total_tokens = await self._calculate_chat_history_tokens()
             if self.max_input_tokens:
@@ -84,7 +86,7 @@ class ChatLLM(ABC):
         if not get_num_params(self._reply):
             reply = await self._reply()
         else:
-            reply = await self._reply(message.content, resp_model)
+            reply = await self._reply(message.content, resp_model, history)
         reply_str = Message(role=MessageRole.assistant, content=f"{reply}")
         if self.tokenizer:
             reply_tokens = len(await self.tokenizer(reply_str.content))
@@ -107,7 +109,9 @@ class ChatLLM(ABC):
         else:
             return reply_str
 
-    async def _reply(self, prompt: Optional[str] = None, resp_model=None) -> str:
+    async def _reply(
+        self, prompt: Optional[str] = None, resp_model=None, history=None
+    ) -> str:
         """Generate the reply given a prompt.
         Do not use this method directly. Use `__call__` instead.
 
@@ -121,7 +125,7 @@ class ChatLLM(ABC):
         """
         raise NotImplementedError
 
-    async def __call__(self, prompt: str, resp_model=None) -> str:
+    async def __call__(self, prompt: str, resp_model=None, history=None) -> str:
         """Generate the reply given a prompt.
 
         Parameters
@@ -147,7 +151,7 @@ class ChatLLM(ABC):
         if self.llm:
             reply = await self._call_llm(message)
         else:
-            reply = await self._call_chatllm(message, resp_model)
+            reply = await self._call_chatllm(message, resp_model, history)
         self.chat_history.append(reply)
         if resp_model:
             return reply

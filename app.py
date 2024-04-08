@@ -2,11 +2,16 @@ import os
 import pickle
 
 import streamlit as st
-from ghost.core.router import intents, route
+from ghost.core.router import route
+from ghost.routes.intents import intents
 
 
 def main():
     st.title("Ghost in the Shell")
+    usage = f"""### What do you want to do?
+{intents}
+        """
+    st.markdown(usage)
 
     # file_path = os.path.join(os.getcwd(), "ghost.pkl")
     if "messages" not in st.session_state:
@@ -22,17 +27,13 @@ def main():
             st.markdown(message["content"])
 
     if "intent" not in st.session_state:
-        st.session_state.intent = ""
+        st.session_state.intent = None
         st.session_state.pair_index = None
-        usage = f"""### What do you want to do?
-{intents}
-        """
-        st.markdown(usage)
 
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
-    if prompt := st.chat_input("What would you like me do?"):
+    if prompt := st.chat_input("sup?"):
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
