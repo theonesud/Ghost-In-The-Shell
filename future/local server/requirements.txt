@@ -2,7 +2,7 @@
 torch==2.1.1
 torchvision==0.16.1
 torchaudio==2.1.1
-transformers==4.36.0
+transformers==4.38.0
 optimum==1.15.0
 auto-gptq==0.5.1
 
