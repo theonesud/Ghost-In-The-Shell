@@ -9,6 +9,9 @@ from io import StringIO
 from pathlib import Path
 
 import astor
+
+# from google.cloud import translate_v2 as translate
+import boto3
 import pandas as pd
 import streamlit as st
 from dotenv import load_dotenv
@@ -40,8 +43,11 @@ from ghost.utils.openai import (
     translator2,
     tweeter,
 )
+from rapidfuzz import fuzz, process
 from selenium import webdriver
 
+# translate_client = translate.Client()
+lang = None
 load_dotenv()
 
 intents = """
@@ -227,12 +233,60 @@ def reply_to_intent_4(prompt, messages):
         return resp
 
 
+# def translate_text(target: str, text: str) -> dict:
+#     """Translates text into the target language.
+
+#     Target must be an ISO 639-1 language code.
+#     See https://g.co/cloud/translate/v2/translate-reference#supported_languages
+#     """
+#     if isinstance(text, bytes):
+#         text = text.decode("utf-8")
+
+#     result = translate_client.translate(text, target_language=target)
+
+#     print("Text: {}".format(result["input"]))
+#     print("Translation: {}".format(result["translatedText"]))
+#     print("Detected source language: {}".format(result["detectedSourceLanguage"]))
+
+#     return result
+
+
+def translate_text(text, source_lang, target_lang):
+    client = boto3.client(
+        "translate",
+        aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+        aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+        region_name=os.getenv("AWS_REGION"),
+    )
+    response = client.translate_text(
+        Text=text, SourceLanguageCode=source_lang, TargetLanguageCode=target_lang
+    )
+    return response["TranslatedText"]
+
+
 def reply_to_intent_5(prompt, messages):
+    global lang
     if st.session_state.pair_index == 0:
         st.session_state.pair_index = 1
-        return "Enter Customer Query (Non-English) Example: ¿Cuándo llegará mi pedido?"
+        return "Choose a language - Urdu, Gujarati, Latvian"
     elif st.session_state.pair_index == 1:
-        translation = asyncio.run(translator1(prompt, history=messages))
+        st.session_state.pair_index = 2
+        lang = process.extractOne(
+            prompt, ["Urdu", "Gujarati", "Latvian"], scorer=fuzz.ratio
+        )
+        _map = {"Urdu": "ur", "Gujarati": "gu", "Latvian": "lv"}
+        lang = _map[lang[0]]
+        if lang == "ur":
+            return "میں آپ کی کیسے مدد کر سکتا ہوں"
+            return "Mein aapki kaise madat kar sakta hu?"
+        elif lang == "gu":
+            return "હું આપની શું મદદ કરી શકું"
+            return "Huṁ āpanī śuṁ madad karī śakuṁ?"
+        elif lang == "lv":
+            return "kā es varu Jums palīdzēt?"
+    elif st.session_state.pair_index == 2:
+        translation = translate_text(lang, prompt)
+        # translation = asyncio.run(translator1(prompt, history=messages))
         st.write(translation)
         response = asyncio.run(responder(translation, history=messages))
         st.write(response)
