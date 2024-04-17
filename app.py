@@ -29,6 +29,7 @@ def main():
     if "intent" not in st.session_state:
         st.session_state.intent = None
         st.session_state.pair_index = None
+        st.session_state.subintent_no = None
 
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):

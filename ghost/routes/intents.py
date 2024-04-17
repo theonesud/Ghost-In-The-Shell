@@ -31,23 +31,27 @@ from ghost.utils.openai import (
     ecom_tagger,
     emailer,
     explainer,
+    omw,
     options,
     pather,
     persona,
     prdmaster,
     query_writer,
-    responder,
+    register_complaint,
     sales_data,
+    support_intent_recognizer,
+    support_intents,
     tool_user,
-    translator1,
-    translator2,
     tweeter,
 )
+
+# from ghost.utils.seq import execute_tasks
 from rapidfuzz import fuzz, process
 from selenium import webdriver
 
 # translate_client = translate.Client()
 lang = None
+local_history = []
 load_dotenv()
 
 intents = """
@@ -233,7 +237,7 @@ def reply_to_intent_4(prompt, messages):
         return resp
 
 
-# def translate_text(target: str, text: str) -> dict:
+# def translate_text_gcloud(target: str, text: str) -> dict:
 #     """Translates text into the target language.
 
 #     Target must be an ISO 639-1 language code.
@@ -271,6 +275,7 @@ def reply_to_intent_5(prompt, messages):
         return "Choose a language - Urdu, Gujarati, Latvian"
     elif st.session_state.pair_index == 1:
         st.session_state.pair_index = 2
+        st.write(f"Available Options: {support_intents}")
         lang = process.extractOne(
             prompt, ["Urdu", "Gujarati", "Latvian"], scorer=fuzz.ratio
         )
@@ -278,24 +283,75 @@ def reply_to_intent_5(prompt, messages):
         lang = _map[lang[0]]
         if lang == "ur":
             return "میں آپ کی کیسے مدد کر سکتا ہوں"
-            return "Mein aapki kaise madat kar sakta hu?"
+            # return "Mein aapki kaise madat kar sakta hu?"
         elif lang == "gu":
             return "હું આપની શું મદદ કરી શકું"
-            return "Huṁ āpanī śuṁ madad karī śakuṁ?"
+            # return "Huṁ āpanī śuṁ madad karī śakuṁ?"
         elif lang == "lv":
             return "kā es varu Jums palīdzēt?"
     elif st.session_state.pair_index == 2:
-        translation = translate_text(lang, prompt)
-        # translation = asyncio.run(translator1(prompt, history=messages))
-        st.write(translation)
-        response = asyncio.run(responder(translation, history=messages))
-        st.write(response)
-        translation = asyncio.run(
-            translator2(
-                f"Response: {response}. Original question: {prompt}", history=messages
+        translation = translate_text(prompt, lang, "en")
+        st.write("""Translation:""", translation)
+
+        if not st.session_state.subintent_no:
+            st.session_state.subintent_no = int(
+                asyncio.run(support_intent_recognizer(translation))
             )
-        )
-        return translation
+
+        if st.session_state.subintent_no == 1:
+            # 1. check where is their order.
+            if st.session_state.subpair_index == 0:
+                st.session_state.subpair_index = 1
+                st.write("Translation: Please enter your order id")
+                return translate_text("Please enter your order id", "en", lang)
+            elif st.session_state.subpair_index == 1:
+                st.session_state.subintent_no = 0
+                resp = asyncio.run(omw(translation))
+                st.write("Translation:", resp)
+                return translate_text(resp, "en", lang)
+        elif st.session_state.subintent_no == 2:
+            # 2. raise a complain about their order.
+            if st.session_state.subpair_index == 0:
+                st.session_state.subpair_index = 1
+                # local_history.append(
+                #     {"role": "assistant", "content": "Please enter your order id"}
+                # )
+                st.write("Translation: Please enter your order id")
+                return translate_text("Please enter your order id", "en", lang)
+            elif st.session_state.subpair_index == 1:
+                st.session_state.subpair_index = 2
+                local_history.append(
+                    {
+                        "role": "user",
+                        "content": f"""Order id: {translation}. Product: Red dress with frills and a pant. Price: 700Rs Bought on: 1 week ago. product rating: 4.1""",
+                    }
+                )
+                st.write("Translation: Please enter your complain")
+                local_history.append(
+                    {"role": "assistant", "content": "Please enter your complain"}
+                )
+                return translate_text("Please enter your complain", "en", lang)
+            elif st.session_state.subpair_index == 2:
+                local_history.append({"role": "user", "content": translation})
+                resp = asyncio.run(
+                    register_complaint(translation, history=local_history)
+                )
+                local_history.append({"role": "assistant", "content": resp})
+                st.write("Translation:", resp)
+                return translate_text(resp, "en", lang)
+        # elif st.session_state.subintent_no == 3:
+        #     # 3. create a new order.
+        #     pass
+        # elif st.session_state.subintent_no == 4:
+        #     # 4. edit an order.
+        #     pass
+        # elif st.session_state.subintent_no == 5:
+        #     # 5. cancel an order.
+        #     pass
+        # st.write(response)
+
+        # translation = translate_text(response, "en", lang)
+        # return translation
 
 
 def reply_to_intent_6(prompt, messages):

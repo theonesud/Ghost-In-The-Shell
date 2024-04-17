@@ -10,6 +10,7 @@ import pandas as pd
 import tiktoken
 from ghost import ChatLLM, Tokenizer
 from ghost.agents import ToolUserAgent
+from ghost.schema.message import Message, MessageRole
 from ghost.tools import (
     FileAppendTool,
     FileCopyTool,
@@ -48,8 +49,25 @@ class OpenAIChatLLM(ChatLLM):
         super().__init__(tokenizer=OpenAITokenizer())
 
     async def _reply(self, prompt, resp_model=None, history=None):
+        systemprompt = None
         if history:
-            self.chat_history = history
+            if len(self.chat_history):
+                sys = self.chat_history.pop(0)
+                if sys.role == MessageRole.system:
+                    systemprompt = sys.content
+            if systemprompt:
+                self.chat_history = [Message(role="system", content=systemprompt)]
+                self.chat_history.extend(
+                    [
+                        Message(role=item["role"], content=item["content"])
+                        for item in history
+                    ]
+                )
+            else:
+                self.chat_history = [
+                    Message(role=item["role"], content=item["content"])
+                    for item in history
+                ]
         if resp_model:
             openai = OpenAI()
             openai.api_key = os.environ["OPENAI_API_KEY"]
@@ -400,16 +418,41 @@ tool_user = ToolUserAgent(
         TerminalTool(),
     ],
 )
-translator1 = OpenAIChatLLM()
-asyncio.run(translator1.set_system_prompt("Translate this text to english"))
-responder = OpenAIChatLLM()
-asyncio.run(responder.set_system_prompt("Respond to the users query normally"))
-translator2 = OpenAIChatLLM()
+# translator1 = OpenAIChatLLM()
+# asyncio.run(translator1.set_system_prompt("Translate this text to english"))
+ecommerce_support_responder = OpenAIChatLLM()
 asyncio.run(
-    translator2.set_system_prompt(
-        "Translate the response to the original qeustions language"
+    ecommerce_support_responder.set_system_prompt(
+        """The user is trying to search for the right outfit. Collect the following information about the outfit by asking questions one by one:
+1. what style does the outfit have? - give specific examples like: urban, casual, streetwear, athleasure, gymwear, housewear
+2. what season would they want to wear it in?
+3. what would be the price range?
+4. what is the occasion?
+5. what is the material of the outfit?
+6. what is the color of the outfit?
+7. what is the brand of the outfit?
+8. what is the size of the outfit?
+etc
+"""
     )
 )
+support_intents = """
+1. where is my order?
+2. raise a complain about my order.
+"""
+support_intent_recognizer = OpenAIChatLLM()
+asyncio.run(
+    support_intent_recognizer.set_system_prompt(f"""Recognize the intent of the user from the following intents:
+{support_intents}
+Reply only the serial number of the intent.
+""")
+)
+# translator2 = OpenAIChatLLM()
+# asyncio.run(
+#     translator2.set_system_prompt(
+#         "Translate the response to the original qeustions language"
+#     )
+# )
 emailer = OpenAIChatLLM()
 asyncio.run(
     emailer.set_system_prompt(
@@ -430,3 +473,19 @@ asyncio.run(
         "Create valid urls from the users query Eg: https://www.google.com, https://www.facebook.com"
     )
 )
+omw = OpenAIChatLLM()
+asyncio.run(
+    omw.set_system_prompt(
+        "The user will give you an order id. Your job is to tell the user that their order is on the way is expected to arrive in 3 days"
+    )
+)
+# register_complaint = None
+register_complaint = OpenAIChatLLM()
+asyncio.run(
+    register_complaint.set_system_prompt(
+        "Act as a customer support representative for our ecommerce fashion brand. We sell clothes online. People will come to you with their complaints. Your job is to register the complaint on our platform. You have all the information about our company policies and terms of service. You can offer refunds for anything. Do not offer general advice."
+    )
+)
+
+
+# Our customers will come to you with their complaint about a product they ordered. Your job is to tell the user that your complaint has been registered and will be acted upon soon. Offer a reasonable amount of refund if necessary. If they say yes, then tell them the refund will be sent to their account shortly. Be consice. Do not give the user other tips. You have all the information about our company policies and terms of service. You can offer refunds for anything.
