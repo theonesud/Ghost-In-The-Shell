@@ -442,10 +442,9 @@ support_intents = """
 """
 support_intent_recognizer = OpenAIChatLLM()
 asyncio.run(
-    support_intent_recognizer.set_system_prompt(f"""Recognize the intent of the user from the following intents. Reply only the serial number of the intent.
-Intents:
+    support_intent_recognizer.set_system_prompt(f"""Which of the following intents is the user trying to do? Only reply with the serial number:
 {support_intents}
-Reply only the serial number of the intent.
+Only reply with the serial number.
 """)
 )
 # translator2 = OpenAIChatLLM()
