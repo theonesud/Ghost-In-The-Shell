@@ -3,46 +3,49 @@ import pickle
 
 import streamlit as st
 from ghost.core.router import route
+from ghost.routes.analyst import business_analyst
+from ghost.routes.catalog import search_catalog
+from ghost.routes.customer import customer_rep
 from ghost.routes.intents import intents
 
 
 def main():
-    st.title("Ghost in the Shell")
-    usage = f"""### What do you want to do?
-{intents}
-        """
-    st.markdown(usage)
-
-    # file_path = os.path.join(os.getcwd(), "ghost.pkl")
+    st.title("AI Terminal")
+    if "intent_id" not in st.session_state:
+        st.session_state.intent_id = None
+    if "seq_id" not in st.session_state:
+        st.session_state.seq_id = None
+    choices = {
+        1: {
+            "target_func": search_catalog,
+            "user_intent": "Search the product catalog",
+        },
+        2: {
+            "target_func": business_analyst,
+            "user_intent": "Talk to a business analyst",
+        },
+        3: {
+            "target_func": customer_rep,
+            "user_intent": "Talk to a customer representative",
+        },
+    }
+    st.markdown(
+        f"""Choose: {': '.join(f'{k}: {v['user_intent']}' for k, v in choices.items())}"""
+    )
     if "messages" not in st.session_state:
         st.session_state.messages = []
-    # if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
-    #     with open(file_path, "rb") as f:
-    #         st.session_state.messages = pickle.load(f)
-    # else:
-    #     with open(file_path, "wb") as f:
-    #         pickle.dump(st.session_state.messages, f)
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-    if "intent" not in st.session_state:
-        st.session_state.intent = None
-        st.session_state.pair_index = None
-
-    for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
-    if prompt := st.chat_input("sup?"):
+    if prompt := st.chat_input("Talk to the AI...."):
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
         with st.chat_message("assistant"):
-            response = route(prompt, st.session_state.messages)
+            response = route(choices, prompt, st.session_state.messages)
             st.markdown(response)
         st.session_state.messages.append({"role": "assistant", "content": response})
-    # with open(os.path.join(os.getcwd(), "ghost.pkl"), "wb") as f:
-    #     pickle.dump(st.session_state.messages, f)
 
 
 def check_password():
