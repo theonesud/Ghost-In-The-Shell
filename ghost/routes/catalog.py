@@ -1,218 +1,152 @@
 import asyncio
+import random
 from typing import List
 
 import pandas as pd
 import streamlit as st
+from ghost.agents import ToolUserAgent
+from ghost.tools import (
+    FileAppendTool,
+    FileCopyTool,
+    FileDeleteTool,
+    FileFolderExistsTool,
+    FileFolderMoveTool,
+    FileReadTool,
+    FileWriteTool,
+    FolderCopyTool,
+    FolderCreateTool,
+    FolderDeleteTool,
+    FolderListTool,
+    FolderSearchTool,
+    PythonInterpreterTool,
+    TerminalTool,
+)
 from ghost.utils.openai import OpenAIChatLLM
 from pydantic import BaseModel, Field
 
 
-def create_dummy_catalog():
+def create_dummy_catalog(num_products=1000):
     """
-    Create dummy data for the e-commerce catalog.
+    Create a larger and more diverse dummy data set for an e-commerce catalog with randomly generated data,
+    including detailed tags and cost calculations.
+
+    Parameters:
+    num_products (int): Number of products to generate.
+
+    Returns:
+    pd.DataFrame: A DataFrame with the generated product catalog.
     """
-    # Expanding the original database with more entries and details
+
+    # Defining possible attributes for products
+    product_types = [
+        "Jacket",
+        "Boots",
+        "Dress",
+        "Scarf",
+        "Sunglasses",
+        "Coat",
+        "Jeans",
+        "T-Shirt",
+        "Earrings",
+        "Wristwatch",
+        "Sneakers",
+        "Sweater",
+        "Gown",
+        "Bag",
+        "Scarf",
+        "Tee",
+        "Loafers",
+        "Hat",
+        "Necklace",
+        "Blazer",
+    ]
+    materials = [
+        "Denim",
+        "Leather",
+        "Floral",
+        "Silk",
+        "Polarized",
+        "Classic",
+        "Skinny",
+        "Cotton",
+        "Bohemian",
+        "Canvas",
+        "Woolen",
+        "Velvet",
+        "Cashmere",
+        "Graphic",
+        "Suede",
+        "Knit",
+        "Statement",
+        "Tailored",
+    ]
+    colors = [
+        "Blue",
+        "Black",
+        "Red",
+        "Multicolor",
+        "Grey",
+        "Beige",
+        "White",
+        "Gold",
+        "Brown",
+        "Purple",
+        "Silver",
+    ]
+    seasons = ["Winter", "Summer", "All"]
+    genders = ["Men", "Women", "Unisex"]
+
     data = {
-        "Product ID": [
-            "P001",
-            "P002",
-            "P003",
-            "P004",
-            "P005",
-            "P006",
-            "P007",
-            "P008",
-            "P009",
-            "P010",
-            "P011",
-            "P012",
-            "P013",
-            "P014",
-            "P015",
-            "P016",
-            "P017",
-            "P018",
-            "P019",
-            "P020",
-        ],
+        "Product ID": [f"P{str(i).zfill(4)}" for i in range(1, num_products + 1)],
         "Name": [
-            "Vintage Denim Jacket",
-            "Leather Ankle Boots",
-            "Floral Print Maxi Dress",
-            "Silk Scarf",
-            "Polarized Aviator Sunglasses",
-            "Classic Trench Coat",
-            "Black Skinny Jeans",
-            "White Cotton T-Shirt",
-            "Bohemian Style Earrings",
-            "Leather Wristwatch",
-            "Canvas Sneakers",
-            "Woolen Sweater",
-            "Velvet Evening Gown",
-            "Leather Messenger Bag",
-            "Cashmere Scarf",
-            "Graphic Tee",
-            "Suede Loafers",
-            "Chunky Knit Hat",
-            "Statement Necklace",
-            "Tailored Blazer",
+            random.choice(materials) + " " + random.choice(product_types)
+            for _ in range(num_products)
         ],
-        "Gender": [
-            "Unisex",
-            "Women",
-            "Women",
-            "Unisex",
-            "Unisex",
-            "Unisex",
-            "Unisex",
-            "Unisex",
-            "Women",
-            "Unisex",
-            "Unisex",
-            "Unisex",
-            "Women",
-            "Unisex",
-            "Unisex",
-            "Unisex",
-            "Men",
-            "Unisex",
-            "Women",
-            "Unisex",
-        ],
-        "Tags": [
-            "jacket, denim, vintage, casual",
-            "boots, leather, ankle, footwear",
-            "dress, floral, maxi, summer",
-            "scarf, silk, accessory, pattern",
-            "sunglasses, aviator, polarized, fashion",
-            "coat, trench, classic, outerwear",
-            "jeans, skinny, black, denim",
-            "t-shirt, cotton, white, basic",
-            "earrings, bohemian, style, accessory",
-            "wristwatch, leather, timeless, accessory",
-            "sneakers, canvas, comfortable, casual",
-            "sweater, woolen, warm, winter",
-            "gown, velvet, evening, luxury",
-            "bag, leather, messenger, utility",
-            "scarf, cashmere, luxury, warmth",
-            "tee, graphic, casual, cotton",
-            "loafers, suede, comfortable, footwear",
-            "hat, knit, chunky, warm",
-            "necklace, statement, accessory, fashion",
-            "blazer, tailored, formal, stylish",
-        ],
-        "MRP": [
-            1200,
-            2500,
-            1800,
-            400,
-            1500,
-            3000,
-            1000,
-            500,
-            600,
-            2000,
-            800,
-            900,
-            3200,
-            1800,
-            1200,
-            400,
-            1100,
-            300,
-            700,
-            2200,
-        ],
-        "Cost": [
-            700,
-            1500,
-            1100,
-            200,
-            900,
-            1800,
-            500,
-            250,
-            300,
-            1200,
-            400,
-            450,
-            2000,
-            900,
-            600,
-            200,
-            550,
-            150,
-            350,
-            1100,
-        ],
-        "Colour Family": [
-            "Blue",
-            "Black",
-            "Red",
-            "Multicolor",
-            "Grey",
-            "Beige",
-            "Black",
-            "White",
-            "Gold",
-            "Brown",
-            "White",
-            "Grey",
-            "Purple",
-            "Brown",
-            "Red",
-            "Black",
-            "Brown",
-            "Blue",
-            "Silver",
-            "Black",
-        ],
-        "Season": [
-            "Winter",
-            "All",
-            "Summer",
-            "All",
-            "Summer",
-            "Winter",
-            "All",
-            "Summer",
-            "All",
-            "All",
-            "All",
-            "Winter",
-            "All",
-            "All",
-            "Winter",
-            "Summer",
-            "Summer",
-            "Winter",
-            "All",
-            "All",
-        ],
+        "Gender": [random.choice(genders) for _ in range(num_products)],
+        "Tags": [None] * num_products,  # Placeholder for tags
+        "MRP": [random.randint(200, 3000) for _ in range(num_products)],
+        "Cost": [None] * num_products,  # Placeholder for cost
+        "Colour Family": [random.choice(colors) for _ in range(num_products)],
+        "Season": [random.choice(seasons) for _ in range(num_products)],
     }
 
-    data = pd.DataFrame(data)
-    for index, row in data.iterrows():
-        new_tag = f"{row['Name'].lower()}, {row['Gender'].lower()}, {row['Season'].lower()}, {row['Colour Family'].lower()}"
-        data.at[index, "Tags"] += f", {new_tag}"
-    return pd.DataFrame(data)
+    # Convert to DataFrame
+    df = pd.DataFrame(data)
+
+    # Generating Tags and Cost
+    for index, row in df.iterrows():
+        # Creating detailed tags
+        style_tags = [
+            row["Name"].split()[0].lower(),
+            "style",
+            row["Season"].lower(),
+            "fashion",
+        ]
+        additional_tags = f"{row['Colour Family'].lower()}, {row['Gender'].lower()}, {', '.join(random.sample(style_tags, 2))}"
+        df.at[index, "Tags"] = f"{row['Name'].lower()}, {additional_tags}"
+
+        # Setting cost as a random percentage of MRP
+        df.at[index, "Cost"] = round(
+            row["MRP"] * random.uniform(0.5, 0.9)
+        )  # Cost is between 50% - 90% of MRP
+
+    return df
 
 
 def run_seq(funclist, prompt, messages):
-    print("<<<<<<<<<<<<", st.session_state.seq_id)
     if not st.session_state.seq_id:
         st.session_state.seq_id = 1
     else:
-        st.session_state.seq_id += 1
-    print(">>>>>>>>>>>>>>>>>", st.session_state.seq_id)
-    return funclist[st.session_state.seq_id](prompt, messages)
+        if st.session_state.seq_id < len(funclist):
+            st.session_state.seq_id += 1
+    return funclist[st.session_state.seq_id - 1](prompt, messages)
 
 
 def search_catalog(prompt, messages):
     catalog = create_dummy_catalog()
 
-    class TagResp(BaseModel):
-        tags: List[str]
+    # class TagResp(BaseModel):
+    #     tags: List[str]
 
     def intro(prompt, messages):
         st.markdown("This is your product catalog:")
@@ -223,17 +157,25 @@ def search_catalog(prompt, messages):
         ai = OpenAIChatLLM()
         asyncio.run(
             ai.set_system_prompt(
-                f"Create the ecommerce website search tags for the user query. You can choose from the tags mentioned in this db column {catalog['Tags']}"
+                f"write the correct pandas queries to show the products the user wants. assume pandas is available as pd and the dataframe is available as df. This is the output of df.head: {catalog.head()}"
             )
         )
-        tags = asyncio.run(ai(prompt, TagResp, messages))
-        st.markdown(f"Filtering tags: {tags}")
-        results = pd.DataFrame()
-        for tag in tags:
-            matched_items = catalog[catalog["Tags"].str.contains(tag, case=False)]
-            results = pd.concat([results, matched_items]).drop_duplicates()
-        st.dataframe(results)
-        return results
+        query = asyncio.run(ai(prompt))
+        st.markdown(f"Query: {query}")
+        tool_user = ToolUserAgent(
+            chatllm=OpenAIChatLLM(),
+            tools=[
+                PythonInterpreterTool(),
+            ],
+        )
+        resp = asyncio.run(tool_user(prompt))
+        return resp.output
+        # results = pd.DataFrame()
+        # for tag in tags.tags:
+        #     matched_items = catalog[catalog["Tags"].str.contains(tag, case=False)]
+        #     results = pd.concat([results, matched_items]).drop_duplicates()
+        # st.dataframe(results)
+        # return results
 
     func_list = [intro, search]
     return run_seq(func_list, prompt, messages)
