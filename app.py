@@ -1,51 +1,44 @@
-import os
-import pickle
-
 import streamlit as st
-from ghost.core.router import route
 from ghost.routes.analyst import business_analyst
 from ghost.routes.catalog import search_catalog
 from ghost.routes.customer import customer_rep
-from ghost.routes.intents import intents
 
 
 def main():
-    st.title("AI Terminal")
-    if "intent_id" not in st.session_state:
-        st.session_state.intent_id = None
-    if "seq_id" not in st.session_state:
-        st.session_state.seq_id = None
-    choices = {
-        1: {
-            "target_func": search_catalog,
-            "user_intent": "Search the product catalog",
-        },
-        2: {
-            "target_func": business_analyst,
-            "user_intent": "Talk to a business analyst",
-        },
-        3: {
-            "target_func": customer_rep,
-            "user_intent": "Talk to a customer representative",
-        },
-    }
-    st.markdown(
-        f"""Choose: {': '.join(f'{k}: {v['user_intent']}' for k, v in choices.items())}"""
-    )
+    demos = ["Customer Service", "Product Search", "Business Analyst"]
+    funcs = [customer_rep, search_catalog, business_analyst]
+    if "demo" not in st.session_state:
+        st.session_state.demo = demos[0]
     if "messages" not in st.session_state:
         st.session_state.messages = []
+    # if "conv_index" not in st.session_state:
+    #     st.session_state.conv_index = 0
+
+    with st.sidebar:
+        selected = st.selectbox(
+            "Choose a demo:",
+            demos,
+            index=demos.index(st.session_state.demo),
+        )
+        if selected != st.session_state.demo:
+            st.session_state.demo = selected
+            st.session_state.messages = []
+            # st.session_state.conv_index = 0
+
+    st.title("HumanCore AI")
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
-
-    if prompt := st.chat_input("Talk to the AI...."):
+    if prompt := st.chat_input("Talk to the AI..."):
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
         with st.chat_message("assistant"):
-            response = route(choices, prompt, st.session_state.messages)
-            st.markdown(response)
-        st.session_state.messages.append({"role": "assistant", "content": response})
+            resp = funcs[demos.index(st.session_state.demo)](
+                prompt, st.session_state.messages
+            )
+            st.markdown(resp)
+        st.session_state.messages.append({"role": "assistant", "content": resp})
 
 
 def check_password():
