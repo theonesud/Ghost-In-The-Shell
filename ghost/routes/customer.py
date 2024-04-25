@@ -1,4 +1,6 @@
 import asyncio
+import json
+import re
 
 import streamlit as st
 from ghost.utils.openai import OpenAIChatLLM
@@ -14,7 +16,7 @@ Follow these standard protocols if the conditions are met:
 
 Condition 1: The user is trying to search for a product
 Protocol: You need to guide them to the right product.
-Do this by asking the following specific questions one by one (one question in one response) -
+Do this by finding the answers to these questions one by one (one question in one response) -
 What product do they want to buy?
 What occasion do they want to wear the product in?
 What is the weather they want to wear the product in?
@@ -36,7 +38,7 @@ Once you know the answers to all these questions, reply in the following json co
 
 Condition 2: The user has a payment issue with their previously ordered item
 Protocol: You need to find all the details of the issue with their payment
-Do this by asking the following specific questions one by one (one question in one response) -
+Do this by finding the answers to these questions one by one (one question in one response) -
 Which order do they have an issue with?
 what was their payment method?
 What is their issue?
@@ -51,7 +53,7 @@ Once you know the answers to all these questions, reply in the following json co
 
 Condition 3: The user has questions about their previously ordered item
 Protocol: You need to find all the details about their question
-Do this by asking the following specific questions one by one (one question in one response) -
+Do this by finding the answers to these questions one by one (one question in one response) -
 Which order are they talking about?
 What is their issue?
 Once you know the answers to all these questions, reply in the following json code block format with the details of the issue:
@@ -69,6 +71,16 @@ Once you know the answers to all these questions, reply in the following json co
 
 def customer_rep(prompt, messages):
     resp = asyncio.run(ai(prompt))
+    # regex find a json codeblock
+    codeblock = re.findall(r"```json(.*?)```", resp, re.DOTALL)
+    if codeblock:
+        package = json.loads(codeblock[0])
+        if package["user_intent"] == "product search":
+            return f"Making an internal query for {package}"
+        elif package["user_intent"] == "payment issue":
+            return f"Making an internal query for {package}"
+        elif package["user_intent"] == "order issue":
+            return f"Making an internal query for {package}"
     return resp
 
     # def introduce(prompt, messages):
