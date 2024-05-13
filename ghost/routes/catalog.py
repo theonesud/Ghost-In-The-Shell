@@ -1,5 +1,7 @@
 import asyncio
+import json
 import random
+import re
 from typing import List
 
 import pandas as pd
@@ -142,8 +144,63 @@ def run_seq(funclist, prompt, messages):
     return funclist[st.session_state.seq_id - 1](prompt, messages)
 
 
+catalog = pd.read_csv("products.csv")
+catalog = catalog[
+    [
+        "product_name",
+        "price_bc",
+        "is_new_product",
+        "is_pinned",
+        "is_best_seller",
+        "is_active",
+        "created_date",
+        "modified_date",
+        "like_count",
+        "price",
+        "price_str",
+        "url",
+        "image",
+        "barcode",
+        "skin_type",
+        "product",
+        "price_range",
+    ]
+]
+wardhabot = OpenAIChatLLM()
+asyncio.run(
+    wardhabot.set_system_prompt(
+        f"""You are an agent that helps the user to search for products for an skincare manufacturer - Wardha. Start the conversation by introducing yourself and what kind of service you provide. Do not offer any kind of general advice.
+
+Follow this standard protocol:
+Protocol: You need to guide them to the right product.
+Do this by finding the answers to these questions one by one (one question in one response) -
+What product do they want to buy?
+What is their skin type?
+Once you know the answers to all these questions, reply in the following json code block format with the details of the product:
+```json
+{{
+"product": "moisturizer",
+"skin_type": "Dry"
+}}
+```
+These are the possible values for each of the fields:
+product: {catalog['product'].unique().tolist()}
+skin_type: {catalog.skin_type.unique().tolist()}
+```
+"""
+    )
+)
+
+summarizer = OpenAIChatLLM()
+asyncio.run(
+    summarizer.set_system_prompt(
+        "The user will give you a json filtered from a catalog database. Summarize it in one sentence with its url telling them that this is the product they are looking for. If the user sends an empty json, then respond with 'I am sorry, I did not find any product matching the criteria'."
+    )
+)
+
+
 def search_catalog(prompt, messages):
-    catalog = create_dummy_catalog()
+    # catalog = create_dummy_catalog()
 
     # class TagResp(BaseModel):
     #     tags: List[str]
@@ -151,25 +208,33 @@ def search_catalog(prompt, messages):
     def intro(prompt, messages):
         st.markdown("This is your product catalog:")
         st.dataframe(catalog)
-        return "Search by Vibe: Eg: Show me a beautiful dress to wear at a party"
+        return "Search by Vibe: Eg: Show me a face cream for oily skin"
 
     def search(prompt, messages):
-        ai = OpenAIChatLLM()
-        asyncio.run(
-            ai.set_system_prompt(
-                f"write the correct pandas queries to show the products the user wants. assume pandas is available as pd and the dataframe is available as df. This is the output of df.head: {catalog.head()}"
+        resp = asyncio.run(wardhabot(prompt))
+        codeblock = re.findall(r"```json(.*?)```", resp, re.DOTALL)
+        if codeblock:
+            query = json.loads(codeblock[0])
+            query_string = " & ".join(
+                [f"{key} == '{value}'" for key, value in query.items()]
             )
-        )
-        query = asyncio.run(ai(prompt))
-        st.markdown(f"Query: {query}")
-        tool_user = ToolUserAgent(
-            chatllm=OpenAIChatLLM(),
-            tools=[
-                PythonInterpreterTool(),
-            ],
-        )
-        resp = asyncio.run(tool_user(prompt))
-        return resp.output
+            filtered_df = catalog.query(query_string)
+
+            # st.markdown(f"Filtered Products: {filtered_df}")
+            # st.dataframe(filtered_df)
+            resp = asyncio.run(summarizer(str(filtered_df.to_json())))
+            return resp
+            # return "Can I help you with anything else?"
+        else:
+            return resp
+        # tool_user = ToolUserAgent(
+        #     chatllm=OpenAIChatLLM(),
+        #     tools=[
+        #         PythonInterpreterTool(),
+        #     ],
+        # )
+        # resp = asyncio.run(tool_user(prompt))
+        # return resp
         # results = pd.DataFrame()
         # for tag in tags.tags:
         #     matched_items = catalog[catalog["Tags"].str.contains(tag, case=False)]

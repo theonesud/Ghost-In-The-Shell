@@ -1,4 +1,5 @@
 import streamlit as st
+from dotenv import load_dotenv
 from ghost.routes.analyst import business_analyst
 from ghost.routes.catalog import search_catalog
 from ghost.routes.customer import customer_rep
@@ -11,8 +12,8 @@ def main():
         st.session_state.demo = demos[0]
     if "messages" not in st.session_state:
         st.session_state.messages = []
-    # if "conv_index" not in st.session_state:
-    #     st.session_state.conv_index = 0
+    if "seq_id" not in st.session_state:
+        st.session_state.seq_id = 0
 
     with st.sidebar:
         selected = st.selectbox(
@@ -23,7 +24,7 @@ def main():
         if selected != st.session_state.demo:
             st.session_state.demo = selected
             st.session_state.messages = []
-            # st.session_state.conv_index = 0
+            st.session_state.seq_id = 0
 
     st.title("HumanCore AI")
     for message in st.session_state.messages:

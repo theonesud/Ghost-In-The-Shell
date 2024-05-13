@@ -8,6 +8,7 @@ from pathlib import Path
 import instructor
 import pandas as pd
 import tiktoken
+from dotenv import load_dotenv
 from ghost import ChatLLM, Tokenizer
 from ghost.agents import ToolUserAgent
 from ghost.schema.message import Message, MessageRole
@@ -29,6 +30,8 @@ from ghost.tools import (
 )
 from openai import OpenAI
 from selenium.webdriver.firefox.options import Options
+
+load_dotenv()
 
 # from ghost.agents import ToolUserAgent
 # from ghost.tools import PythonInterpreterTool, TerminalTool
