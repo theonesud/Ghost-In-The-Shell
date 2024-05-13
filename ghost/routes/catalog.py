@@ -173,7 +173,7 @@ asyncio.run(
 
 Follow this standard protocol:
 Protocol: You need to guide them to the right product.
-Do this by finding the answers to these questions one by one (one question in one response) -
+Do this by finding the answers to these questions one by one (one question in one response, Give suggestions on the product and skin type while asking the questions) -
 What product do they want to buy?
 What is their skin type?
 Once you know the answers to all these questions, reply in the following json code block format with the details of the product:
@@ -183,7 +183,7 @@ Once you know the answers to all these questions, reply in the following json co
 "skin_type": "Dry"
 }}
 ```
-These are the possible values for each of the fields:
+These are the possible values for product and skin_type:
 product: {catalog['product'].unique().tolist()}
 skin_type: {catalog.skin_type.unique().tolist()}
 ```
@@ -194,7 +194,7 @@ skin_type: {catalog.skin_type.unique().tolist()}
 summarizer = OpenAIChatLLM()
 asyncio.run(
     summarizer.set_system_prompt(
-        "The user will give you a json filtered from a catalog database. Summarize it in one sentence with its url telling them that this is the product they are looking for. If the user sends an empty json, then respond with 'I am sorry, I did not find any product matching the criteria'."
+        "The user will give you a json filtered from a catalog database. Convert this json into a sentence. Include all the product links available in md format. If the user sends an empty json, then respond with 'I am sorry, I did not find any product matching the criteria'."
     )
 )
 
