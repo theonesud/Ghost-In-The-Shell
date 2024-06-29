@@ -84,7 +84,7 @@ async def generate_response(
     def generate_stream():
         for x in resp:
             r = json.dumps({"content": x.content, "sentiment": x.sentiment})
-            print(r)
-            yield r
+            print(">>>", r)
+            yield r + "\n"
 
-    return StreamingResponse(generate_stream(), media_type="application/json")
+    return StreamingResponse(generate_stream(), media_type="application/stream+json")
