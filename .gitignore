@@ -14,3 +14,5 @@ output/
 .streamlit
 ghost.pkl
 .fuse_hidden*
+db.json
+test_db.json

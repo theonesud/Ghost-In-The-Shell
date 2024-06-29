@@ -3,7 +3,7 @@ import json
 import pytest
 from httpx import AsyncClient
 
-from main import app  # Adjust this import based on your file structure
+from main import app
 
 
 @pytest.mark.asyncio
@@ -17,4 +17,7 @@ async def test_stream_json_data():
         async for line in response.aiter_lines():
             if line.strip():
                 data = json.loads(line)
-                print("<<< Content:", data["content"], "Sentiment:", data["sentiment"])
+                chat_id = data["chat_id"]
+                content = data["content"]
+                sentiment = data["sentiment"]
+                print(f"Chat ID: {chat_id}, Content: {content}, Sentiment: {sentiment}")

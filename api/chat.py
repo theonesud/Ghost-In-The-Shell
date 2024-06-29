@@ -1,5 +1,6 @@
 import json
 import os
+import pprint
 import time
 import uuid
 from typing import Optional
@@ -12,7 +13,7 @@ from pydantic import BaseModel, Field
 from rich.console import Console
 from tinydb import Query, TinyDB
 
-from db_util import get_db  # Import the get_db function
+from db_util import get_db
 
 router = APIRouter(prefix="/chats", tags=["chats"])
 
@@ -57,7 +58,7 @@ async def generate_response(
 ):
     Chat = Query()
     if not int(chat_id):
-        chat_id = str(uuid.uuid4())
+        chat_id = str(uuid.uuid4()).replace("-", "")
         messages = [
             {"role": "system", "content": "You are a helpful assistant."},
         ]
@@ -83,8 +84,13 @@ async def generate_response(
 
     def generate_stream():
         for x in resp:
-            r = json.dumps({"content": x.content, "sentiment": x.sentiment})
-            print(">>>", r)
-            yield r + "\n"
+            package = {
+                "content": x.content,
+                "sentiment": x.sentiment,
+                "chat_id": chat_id,
+            }
+            pprint.pprint(package)
+            package = json.dumps(package)
+            yield package + "\n"
 
     return StreamingResponse(generate_stream(), media_type="application/stream+json")
