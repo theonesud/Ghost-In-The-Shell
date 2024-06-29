@@ -1,18 +1,10 @@
+import pprint
 import pytest
-from fastapi.testclient import TestClient
-
-from main import app
-
-client = TestClient(app)
+import requests
 
 
 def test_create_task():
-    response = client.post(
-        "/tasks/create", json={"name": "asdasd", "description": "asdasd"}
-    )
+    url = "http://0.0.0.0:8000/tasks/create"
+    data = {"name": "Sud", "description": "The Great"}
+    response = requests.post(url, json=data)
     assert response.status_code == 200
-
-
-# def test_get_tasks():
-#     response = client.get("/tasks/")
-#     assert response.status_code == 200
