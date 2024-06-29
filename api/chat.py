@@ -57,18 +57,20 @@ async def generate_response(
     chat_id: Optional[str], prompt: InputPrompt, db: TinyDB = Depends(get_db)
 ):
     Chat = Query()
-    if not int(chat_id):
-        chat_id = str(uuid.uuid4()).replace("-", "")
-        chat_history = [
-            {"role": "system", "content": "You are a helpful assistant."},
-        ]
-        db.table("chats").insert(
-            {
-                "chat_id": chat_id,
-                "messages": chat_history,
-            }
-        )
-    else:
+    try:
+        int(chat_id)
+        if not int(chat_id):
+            chat_id = str(uuid.uuid4()).replace("-", "")
+            chat_history = [
+                {"role": "system", "content": "You are a helpful assistant."},
+            ]
+            db.table("chats").insert(
+                {
+                    "chat_id": chat_id,
+                    "messages": chat_history,
+                }
+            )
+    except ValueError:
         chat = db.table("chats").get(Chat.chat_id == chat_id)
         chat_history = chat["messages"]
 
@@ -91,10 +93,10 @@ async def generate_response(
                 "chat_id": chat_id,
             }
             # pprint.pprint(package)
-            ai_resp = package.copy()
+            # ai_resp = package.copy()
             package = json.dumps(package)
             yield package + "\n"
-        chat_history.append(ai_resp)
+        chat_history.append({"role": "assistant", "content": x.content})
         db.table("chats").update({"messages": chat_history}, Chat.chat_id == chat_id)
 
     return StreamingResponse(generate_stream(), media_type="application/stream+json")
