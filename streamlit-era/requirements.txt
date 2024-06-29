@@ -1,0 +1,17 @@
+# -e .[all]
+# -r requirements-test.txt
+
+pydantic>=2.3.0,<3.0.0
+astor>=0.8
+streamlit==1.32.2
+pydantic==2.6.4
+astor==0.8.1
+python-dotenv==1.0.1
+instructor==1.0.0
+anthropic==0.23.1
+tiktoken==0.6.0
+selenium==4.19.0
+pandas==2.2.1
+# google-cloud-translate==3.15.3
+rapidfuzz
+boto3==1.34.83

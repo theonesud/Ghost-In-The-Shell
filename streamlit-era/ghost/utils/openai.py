@@ -44,7 +44,7 @@ class OpenAITokenizer(Tokenizer):
         super().__init__()
 
     async def _tokenize(self, text):
-        return tiktoken.encoding_for_model("gpt-4-0125-preview").encode(text)
+        return tiktoken.encoding_for_model("gpt-3.5-turbo").encode(text)
 
 
 class OpenAIChatLLM(ChatLLM):
@@ -72,11 +72,11 @@ class OpenAIChatLLM(ChatLLM):
                     for item in history
                 ]
         if resp_model:
-            openai = OpenAI()
+            openai = OpenAI(base_url=os.getenv("OPENAI_URL"))
             openai.api_key = os.environ["OPENAI_API_KEY"]
-            self.client = instructor.from_openai(openai)
+            self.client = instructor.from_openai(openai, mode=instructor.Mode.JSON)
             resp = self.client.chat.completions.create(
-                model="gpt-4-0125-preview",
+                model=os.getenv("MODEL"),
                 temperature=0.1,
                 response_model=resp_model,
                 messages=[
@@ -86,10 +86,10 @@ class OpenAIChatLLM(ChatLLM):
             )
             return resp
         else:
-            openai = OpenAI()
+            openai = OpenAI(base_url=os.getenv("OPENAI_URL"))
             openai.api_key = os.environ["OPENAI_API_KEY"]
             completion = openai.chat.completions.create(
-                model="gpt-4-0125-preview",
+                model=os.getenv("MODEL"),
                 temperature=0.1,
                 messages=[
                     {"role": msg.role, "content": msg.content}

@@ -17,7 +17,7 @@ def main():
 
     with st.sidebar:
         selected = st.selectbox(
-            "Choose a demo:",
+            "Choose an AI:",
             demos,
             index=demos.index(st.session_state.demo),
         )
@@ -26,7 +26,7 @@ def main():
             st.session_state.messages = []
             st.session_state.seq_id = 0
 
-    st.title("HumanCore AI")
+    # st.title("HumanCore AI")
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
