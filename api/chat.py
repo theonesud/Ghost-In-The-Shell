@@ -90,7 +90,7 @@ async def generate_response(
                 "sentiment": x.sentiment,
                 "chat_id": chat_id,
             }
-            pprint.pprint(package)
+            # pprint.pprint(package)
             ai_resp = package.copy()
             package = json.dumps(package)
             yield package + "\n"
