@@ -59,26 +59,27 @@ async def generate_response(
     Chat = Query()
     if not int(chat_id):
         chat_id = str(uuid.uuid4()).replace("-", "")
-        messages = [
+        chat_history = [
             {"role": "system", "content": "You are a helpful assistant."},
         ]
-        chat = db.table("chats").insert(
+        db.table("chats").insert(
             {
                 "chat_id": chat_id,
-                "messages": messages,
+                "messages": chat_history,
             }
         )
     else:
         chat = db.table("chats").get(Chat.chat_id == chat_id)
-        messages = chat["messages"]
+        chat_history = chat["messages"]
 
-    messages.append({"role": "user", "content": prompt.input_prompt})
+    chat_history.append({"role": "user", "content": prompt.input_prompt})
+
     PartialResp = instructor.Partial[Resp]
     resp = client.chat.completions.create(
         model=model_name,
         temperature=0.1,
         response_model=PartialResp,
-        messages=messages,
+        messages=chat_history,
         stream=True,
     )
 
@@ -90,7 +91,10 @@ async def generate_response(
                 "chat_id": chat_id,
             }
             pprint.pprint(package)
+            ai_resp = package.copy()
             package = json.dumps(package)
             yield package + "\n"
+        chat_history.append(ai_resp)
+        db.table("chats").update({"messages": chat_history}, Chat.chat_id == chat_id)
 
     return StreamingResponse(generate_stream(), media_type="application/stream+json")
