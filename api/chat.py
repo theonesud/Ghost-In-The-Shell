@@ -93,7 +93,6 @@ async def generate_response(
                 "chat_id": chat_id,
             }
             # pprint.pprint(package)
-            # ai_resp = package.copy()
             package = json.dumps(package)
             yield package + "\n"
         chat_history.append({"role": "assistant", "content": x.content})
