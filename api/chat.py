@@ -1,101 +1,47 @@
 import json
-import os
-import pprint
-import time
-import uuid
 from typing import Optional
 
-import instructor
-from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
-from openai import OpenAI
-from pydantic import BaseModel, Field
-from rich.console import Console
 from tinydb import Query, TinyDB
 
-from db_util import get_db
+from model.db import create_new_chat, get_all_chats, get_chat, get_db, update_chat
+from model.io import InputPrompt, LLMResp
+from model.llm import generate
 
 router = APIRouter(prefix="/chats", tags=["chats"])
-
-openai_api_key = os.getenv("OPENAI_API_KEY")
-openai_base_url = os.getenv("OPENAI_URL")
-model_name = os.getenv("MODEL")
-
-openai = OpenAI(base_url=openai_base_url)
-openai.api_key = openai_api_key
-client = instructor.from_openai(openai, mode=instructor.Mode.JSON)
-
-console = Console()
-
-
-class InputPrompt(BaseModel):
-    input_prompt: str
-
-
-class Resp(BaseModel):
-    content: str = Field(description="The content of the reply")
-    sentiment: str = Field(description="The sentiment of the reply")
-
-
-@router.get("/")
-async def get_chats(db: TinyDB = Depends(get_db)):
-    chats = db.table("chats").all()
-    return chats
-
-
-@router.get("/{chat_id}")
-async def get_chat(chat_id: str, db: TinyDB = Depends(get_db)):
-    Chat = Query()
-    chat = db.table("chats").get(Chat.chat_id == chat_id)
-    if not chat:
-        raise HTTPException(status_code=404, detail="Chat not found")
-    return chat
 
 
 @router.post("/generate_response/{chat_id}")
 async def generate_response(
     chat_id: Optional[str], prompt: InputPrompt, db: TinyDB = Depends(get_db)
 ):
-    Chat = Query()
-    try:
-        int(chat_id)
-        if not int(chat_id):
-            chat_id = str(uuid.uuid4()).replace("-", "")
-            chat_history = [
-                {"role": "system", "content": "You are a helpful assistant."},
-            ]
-            db.table("chats").insert(
-                {
-                    "chat_id": chat_id,
-                    "messages": chat_history,
-                }
-            )
-    except ValueError:
-        chat = db.table("chats").get(Chat.chat_id == chat_id)
-        chat_history = chat["messages"]
+    if chat_id == "0":
+        chat_id, chat = await create_new_chat(db)
+    else:
+        chat = await get_chat(chat_id, db)
+    chat.append({"role": "user", "content": prompt.input_prompt})
 
-    chat_history.append({"role": "user", "content": prompt.input_prompt})
-
-    PartialResp = instructor.Partial[Resp]
-    resp = client.chat.completions.create(
-        model=model_name,
-        temperature=0.1,
-        response_model=PartialResp,
-        messages=chat_history,
-        stream=True,
-    )
+    resp_stream = generate(chat)
 
     def generate_stream():
-        for x in resp:
-            package = {
-                "content": x.content,
-                "sentiment": x.sentiment,
-                "chat_id": chat_id,
-            }
-            # pprint.pprint(package)
+        for chunk in resp_stream:
+            llm_response = LLMResp.model_validate(chunk)
+            package = llm_response.model_dump()
+            package["chat_id"] = chat_id
             package = json.dumps(package)
             yield package + "\n"
-        chat_history.append({"role": "assistant", "content": x.content})
-        db.table("chats").update({"messages": chat_history}, Chat.chat_id == chat_id)
+        chat.append({"role": "assistant", "content": chunk.content})
+        update_chat(chat_id, chat, db)
 
     return StreamingResponse(generate_stream(), media_type="application/stream+json")
+
+
+@router.get("/")
+async def get_chats(db: TinyDB = Depends(get_db)):
+    return get_all_chats(db)
+
+
+@router.get("/{chat_id}")
+async def get_one_chat(chat_id: str, db: TinyDB = Depends(get_db)):
+    return await get_chat(chat_id, db)

@@ -1,22 +1,12 @@
 import asyncio
-import time
-from uuid import uuid4
 
 import httpx
-import requests
-from fastapi import APIRouter, FastAPI, HTTPException
+from fastapi import APIRouter
 from loguru import logger
-from prefect import Flow, Task, flow, get_client, task
-from prefect.deployments import Deployment
-from prefect.server.schemas.states import State
+from prefect import flow, task
 from pydantic import BaseModel
-from tinydb import Query, TinyDB
-
-from model.db import get_db
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
-
-db = get_db()
 
 
 class TaskDetails(BaseModel):

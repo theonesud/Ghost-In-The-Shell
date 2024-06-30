@@ -7,3 +7,4 @@ prefect
 openai
 instructor
 loguru
+python-json-logger
