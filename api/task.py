@@ -6,43 +6,42 @@ from loguru import logger
 from prefect import flow, task
 from pydantic import BaseModel
 
+from config import url
+from flows import task_handlers
+from model.io import TaskDetails
+
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
-
-class TaskDetails(BaseModel):
-    name: str
-    description: str
+logger.info("Task API initialized")
 
 
 @router.post("/create/")
 async def create_task(task_details: TaskDetails):
-    @flow(name="Example Flow")
-    async def create_prefect_task(name, description):
-        @task
-        async def example_task(description):
-            await asyncio.sleep(5)
-            return f"Task Result: {name} {description}"
+    logger.info("Create task")
+    try:
+        task_func = task_handlers.get(task_details.type)
+        if task_func:
+            task_result = await task_func(**task_details.params)
+            if task_result is not None:
+                await webhook_state_handler(task_details.type, "Completed")
+            else:
+                return {"message": "Task execution failed"}
+        else:
+            return {"message": "Invalid task type"}
+    except Exception as e:
+        logger.exception(f"Task creation failed: {e}")
+        return {"message": "Task creation failed"}
 
-        task_result = await example_task(description)
-        print(">>Result>>", task_result)
 
-        async def webhook_state_handler(task_name, task_state):
-            webhook_url = "http://0.0.0.0:8000/tasks/webhook/"
-            data = {"task_name": task_name, "task_state": str(task_state)}
-            async with httpx.AsyncClient() as client:
-                try:
-                    await client.post(webhook_url, json=data)
-                except httpx.RequestError as e:
-                    print(f"Failed to send webhook: {e}")
-
-        if task_result:
-            await webhook_state_handler(name, "Completed")
-        return f"Task {name} created and executed successfully."
-
-    asyncio.create_task(
-        create_prefect_task(task_details.name, task_details.description)
-    )
-    return {"message": "Task creation initiated successfully"}
+async def webhook_state_handler(task_name, task_state):
+    webhook_url = f"{url}/tasks/webhook/"
+    logger.info(f"Webhook URL: {webhook_url}")
+    data = {"task_name": task_name, "task_state": str(task_state)}
+    async with httpx.AsyncClient() as client:
+        try:
+            await client.post(webhook_url, json=data)
+        except httpx.RequestError as e:
+            print(f"Failed to send webhook: {e}")
 
 
 @router.post("/webhook/")

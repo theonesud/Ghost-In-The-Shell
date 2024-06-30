@@ -8,3 +8,4 @@ openai
 instructor
 loguru
 python-json-logger
+python-dotenv
