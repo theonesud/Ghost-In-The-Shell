@@ -1,7 +1,7 @@
 import asyncio
 
 import httpx
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from loguru import logger
 from prefect import flow, task
 from pydantic import BaseModel
@@ -12,12 +12,10 @@ from model.io import TaskDetails
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
-logger.info("Task API initialized")
-
 
 @router.post("/create/")
 async def create_task(task_details: TaskDetails):
-    logger.info("Create task")
+    logger.info("Creating task: " + task_details.type)
     try:
         task_func = task_handlers.get(task_details.type)
         if task_func:
@@ -30,12 +28,11 @@ async def create_task(task_details: TaskDetails):
             return {"message": "Invalid task type"}
     except Exception as e:
         logger.exception(f"Task creation failed: {e}")
-        return {"message": "Task creation failed"}
+        return HTTPException(status_code=500, detail=str(e))
 
 
 async def webhook_state_handler(task_name, task_state):
     webhook_url = f"{url}/tasks/webhook/"
-    logger.info(f"Webhook URL: {webhook_url}")
     data = {"task_name": task_name, "task_state": str(task_state)}
     async with httpx.AsyncClient() as client:
         try:
