@@ -10,7 +10,7 @@ load_dotenv()
 
 API_URL = f"{os.getenv('UI_BACKEND')}/chat/completions"
 API_KEY = os.getenv("OPENAI_API_KEY")
-stream = False
+stream = True
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
