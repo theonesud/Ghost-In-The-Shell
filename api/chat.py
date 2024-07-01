@@ -52,7 +52,7 @@ async def chat_completions(request: ChatCompletionRequest):
                     media_type="application/x-ndjson",
                 )
             else:
-                response = llm.chat.completions.create(
+                response = openai.chat.completions.create(
                     model=request.model,
                     messages=[
                         {"role": m.role, "content": m.content} for m in request.messages

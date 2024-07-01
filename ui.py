@@ -4,11 +4,13 @@ import os
 import requests
 import streamlit as st
 from dotenv import load_dotenv
+from loguru import logger
 
 load_dotenv()
 
 API_URL = f"{os.getenv('UI_BACKEND')}/chat/completions"
 API_KEY = os.getenv("OPENAI_API_KEY")
+stream = False
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -18,7 +20,7 @@ for message in st.session_state.messages:
         st.markdown(message["content"])
 
 
-def get_chat_response(messages):
+def get_generator(messages):
     headers = {"Content-Type": "application/json", "Authorization": f"Bearer {API_KEY}"}
     data = {
         "model": os.getenv("MODEL"),
@@ -50,17 +52,43 @@ def get_chat_response(messages):
     return response_text
 
 
+def get_resp(messages):
+    headers = {"Content-Type": "application/json", "Authorization": f"Bearer {API_KEY}"}
+    data = {
+        "model": os.getenv("MODEL"),
+        "messages": messages,
+        "stream": False,
+    }
+    response = requests.post(
+        API_URL, headers=headers, data=json.dumps(data), stream=False
+    )
+    logger.info(response.json())
+    reply = response.json()["choices"][0]["message"]["content"]
+    return reply
+
+
 if prompt := st.chat_input("Sup?"):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    with st.chat_message("assistant"):
-        response_generator = get_chat_response(
-            [
-                {"role": m["role"], "content": m["content"]}
-                for m in st.session_state.messages
-            ]
-        )
-        response_text = st.write_stream(response_generator)
+    if stream:
+        with st.chat_message("assistant"):
+            response_text = st.write_stream(
+                get_generator(
+                    [
+                        {"role": m["role"], "content": m["content"]}
+                        for m in st.session_state.messages
+                    ]
+                )
+            )
+    else:
+        with st.chat_message("assistant"):
+            response_text = get_resp(
+                [
+                    {"role": m["role"], "content": m["content"]}
+                    for m in st.session_state.messages
+                ]
+            )
+            st.write(response_text)
     st.session_state.messages.append({"role": "assistant", "content": response_text})
