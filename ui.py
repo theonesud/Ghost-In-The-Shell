@@ -7,13 +7,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-st.title("ChatGPT-like clone")
 
-API_URL = "https://api.openai.com/v1/chat/completions"
+# API_URL = "https://api.openai.com/v1/chat/completions"
+API_URL = "http://127.0.0.1:8000/v1/chat/completions"
 API_KEY = os.getenv("OPENAI_API_KEY")
-
-if "openai_model" not in st.session_state:
-    st.session_state["openai_model"] = "gpt-3.5-turbo"
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -26,7 +23,7 @@ for message in st.session_state.messages:
 def get_chat_response(messages):
     headers = {"Content-Type": "application/json", "Authorization": f"Bearer {API_KEY}"}
     data = {
-        "model": st.session_state["openai_model"],
+        "model": os.getenv("MODEL"),
         "messages": messages,
         "stream": True,
     }
