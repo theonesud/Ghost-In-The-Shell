@@ -32,6 +32,7 @@ def get_generator(messages):
     response = requests.post(
         API_URL, headers=headers, data=json.dumps(data), stream=True
     )
+    logger.info("Backend response: ", response.status_code)
 
     response_text = ""
     for line in response.iter_lines():
@@ -63,7 +64,7 @@ def get_resp(messages):
     response = requests.post(
         API_URL, headers=headers, data=json.dumps(data), stream=False
     )
-    logger.info(response.json())
+    logger.info("Backend response: ", response.status_code)
     reply = response.json()["choices"][0]["message"]["content"]
     return reply
 

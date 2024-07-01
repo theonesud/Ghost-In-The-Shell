@@ -18,7 +18,6 @@ async def _resp_async_generator(
     messages: List[Message], model: str, max_tokens: int, temperature: float
 ):
     chat_history = [{"role": m.role, "content": m.content} for m in messages]
-    logger.info(f"Before generate: {chat_history}")
     response = openai.chat.completions.create(
         model=model,
         messages=chat_history,
@@ -26,7 +25,7 @@ async def _resp_async_generator(
         temperature=temperature,
         stream=True,
     )
-    logger.info(f"After generate: {response}")
+    logger.info(f"Generated Response: {response}")
 
     for chunk in response:
         chunk_data = chunk.to_dict()
@@ -38,7 +37,7 @@ async def _resp_async_generator(
 @router.post("/chat/completions")
 async def chat_completions(request: ChatCompletionRequest):
     try:
-        logger.info(f"Received request: {request}")
+        logger.info(f"Request Params: {request}")
         if request.messages:
             if request.stream:
                 return StreamingResponse(
