@@ -9,8 +9,7 @@ from tinydb import Query, TinyDB
 
 from config import openai
 from model.db import create_new_chat, get_all_chats, get_chat, get_db, update_chat
-from model.io import ChatCompletionRequest, InputPrompt, LLMResp, Message
-from model.llm import generate
+from model.io import ChatCompletionRequest, Message
 
 router = APIRouter(prefix="/v1")
 

@@ -8,6 +8,7 @@ from loguru import logger
 
 load_dotenv()
 
+st.set_page_config(page_title="Ghost")
 API_URL = f"{os.getenv('UI_BACKEND')}/chat/completions"
 API_KEY = os.getenv("OPENAI_API_KEY")
 stream = True
