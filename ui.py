@@ -7,9 +7,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-
-# API_URL = "https://api.openai.com/v1/chat/completions"
-API_URL = "http://127.0.0.1:8000/v1/chat/completions"
+API_URL = f"{os.getenv('UI_BACKEND')}/chat/completions"
 API_KEY = os.getenv("OPENAI_API_KEY")
 
 if "messages" not in st.session_state:
@@ -52,7 +50,7 @@ def get_chat_response(messages):
     return response_text
 
 
-if prompt := st.chat_input("What is up?"):
+if prompt := st.chat_input("Sup?"):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
