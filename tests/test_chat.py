@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Constants
-API_URL = f"{os.getenv('UI_BACKEND')}/chat/completions"
+API_URL = f"{os.getenv('URL')}/v1/chat/completions"
 API_KEY = os.getenv("OPENAI_API_KEY")
 
 

@@ -6,6 +6,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from api.chat import router as chat_router
 from api.task import router as task_router
+from api.jsonchat import router as jsonchat_router
 
 
 class LogMiddleware(BaseHTTPMiddleware):
@@ -35,4 +36,5 @@ async def health():
 
 
 app.include_router(chat_router)
+app.include_router(jsonchat_router)
 app.include_router(task_router)
