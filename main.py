@@ -1,3 +1,5 @@
+import uuid
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -5,15 +7,16 @@ from loguru import logger
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from api.chat import router as chat_router
-from api.task import router as task_router
 from api.jsonchat import router as jsonchat_router
+from api.task import router as task_router
 
 
 class LogMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        logger.info(f"Request: {request.method} {request.url} {request.query_params} ")
         response = await call_next(request)
-        logger.info(f"Response status: {response.status_code}")
+        logger.info(
+            f"Request: {request.method} {request.url} {request.query_params} Response status: {response.status_code}"
+        )
         return response
 
 

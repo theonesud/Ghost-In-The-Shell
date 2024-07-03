@@ -17,15 +17,14 @@ router = APIRouter(prefix="/v1")
 async def _resp_async_generator(
     messages: List[Message], model: str, max_tokens: int, temperature: float
 ):
-    chat_history = [{"role": m.role, "content": m.content} for m in messages]
     response = openai.chat.completions.create(
         model=model,
-        messages=chat_history,
+        messages=[{"role": m.role, "content": m.content} for m in messages],
         max_tokens=max_tokens,
         temperature=temperature,
         stream=True,
     )
-    logger.info(f"Generated Response: {response}")
+    # logger.info(f"Generated Response: {response}")
 
     for chunk in response:
         chunk_data = chunk.to_dict()
